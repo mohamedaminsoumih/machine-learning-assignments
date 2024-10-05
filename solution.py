@@ -71,20 +71,22 @@ class SoftRBFParzen:
         for x in test_data:
             # Calcul des distances L1
             distances = np.sum(np.abs(self.X_train - x), axis=1)
-            # Calcul des poids RBF
+            # Calcul des poids RBF (noyau gaussien)
             weights = np.exp(-distances / (2 * self.sigma ** 2))
             
-            # Normalisation des poids
+            # Normaliser les poids
             weights_sum = np.sum(weights)
             if weights_sum > 0:
-                weights /= weights_sum  # Normalisation pour s'assurer que les poids s'additionnent à 1
+                weights /= weights_sum
             
-            # Calcul des labels pondérés
+            # Vérifier que les poids ne sont pas tous nuls avant d'utiliser np.bincount
             weighted_labels = np.bincount(self.Y_train, weights=weights)
-            predicted_label = np.argmax(weighted_labels)
+            predicted_label = np.argmax(weighted_labels) if np.sum(weighted_labels) > 0 else np.random.choice(self.Y_train)
+
             predictions.append(predicted_label)
 
         return np.array(predictions)
+
 
 
 # Classe pour calculer le taux d'erreur
