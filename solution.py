@@ -1,5 +1,5 @@
 import numpy as np
-iris = np.genfromtext("iris.txt")
+iris = np.genfromtxt("iris.txt")
 import random
 
 ######## DO NOT MODIFY THIS FUNCTION ########
@@ -12,7 +12,10 @@ def draw_rand_label(x, label_list):
     return np.random.choice(label_list)
 #############################################
 
-
+class NumpyBasics:
+    def __init__(self):
+        # Chargement du jeu de données Iris
+        self.iris = np.genfromtxt("iris.txt")
 class Q1:
 
     def feature_means(self, iris):
