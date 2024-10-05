@@ -39,7 +39,7 @@ class HardParzen:
 
     def fit(self, train_inputs, train_labels):
         self.X_train = train_inputs
-        self.Y_train = train_labels
+        self.Y_train = train_labels.astype(int)
 
     def predict(self, test_data):
         predictions = []
@@ -55,6 +55,9 @@ class HardParzen:
                 predictions.append(predicted_label)
         
         return np.array(predictions)
+    
+    def draw_rand_label(self, x, label_list):
+        return np.random.choice(label_list)
 
 
 class SoftRBFParzen:
@@ -63,7 +66,7 @@ class SoftRBFParzen:
 
     def fit(self, train_inputs, train_labels):
         self.X_train = train_inputs
-        self.Y_train = train_labels
+        self.Y_train = train_labels.astype(int)
 
     def predict(self, test_data):
         predictions = []
