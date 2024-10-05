@@ -1,8 +1,7 @@
 import numpy as np
-iris = np.genfromtxt("iris.txt")
 import random
 
-######## DO NOT MODIFY THIS FUNCTION ########
+# Fonction pour choisir un label aléatoire
 def draw_rand_label(x, label_list):
     seed = abs(np.sum(x))
     while seed < 1:
@@ -10,29 +9,29 @@ def draw_rand_label(x, label_list):
     seed = int(1000000 * seed)
     np.random.seed(seed)
     return np.random.choice(label_list)
-#############################################
 
+# Classe pour charger les données
 class NumpyBasics:
     def __init__(self):
-        # Chargement du jeu de données Iris
         self.iris = np.genfromtxt("iris.txt")
-class Q1:
 
+# Classe pour les statistiques sur le jeu de données
+class Q1:
     def feature_means(self, iris):
-        return np.mean(iris[:, :-1], axis=0) 
+        return np.mean(iris[:, :-1], axis=0)
 
     def empirical_covariance(self, iris):
         return np.cov(iris[:, :-1], rowvar=False)
 
     def feature_means_class_1(self, iris):
-        class_1_data = iris[iris[:, -1] == 1]  # Filtrer les points dont le label est 1
-        return np.mean(class_1_data[:, :-1], axis=0)  # Moyenne des attributs pour la classe 1
+        class_1_data = iris[iris[:, -1] == 1]
+        return np.mean(class_1_data[:, :-1], axis=0)
 
     def empirical_covariance_class_1(self, iris):
-        class_1_data = iris[iris[:, -1] == 1]  # Filtrer les points dont le label est 1
-        return np.cov(class_1_data[:, :-1], rowvar=False)  # Matrice de covariance pour la classe 1
+        class_1_data = iris[iris[:, -1] == 1]
+        return np.cov(class_1_data[:, :-1], rowvar=False)
 
-
+# Classe pour Hard Parzen
 class HardParzen:
     def __init__(self, h):
         self.h = h
@@ -44,22 +43,19 @@ class HardParzen:
     def predict(self, test_data):
         predictions = []
         for x in test_data:
-            distances = np.sum(np.abs(self.X_train - x), axis=1)  # Distance L1
+            distances = np.sum(np.abs(self.X_train - x), axis=1)
             neighbors_in_window = self.Y_train[distances <= self.h]
 
             if len(neighbors_in_window) == 0:
                 label_list = np.unique(self.Y_train)
-                predictions.append(self.draw_rand_label(label_list))  # Note: utiliser label_list directement
+                predictions.append(draw_rand_label(x, label_list))
             else:
                 predicted_label = np.bincount(neighbors_in_window).argmax()
                 predictions.append(predicted_label)
 
         return np.array(predictions)
 
-    def draw_rand_label(self, label_list):
-        return np.random.choice(label_list)  # Choisir un label au hasard
-
-
+# Classe pour Soft RBF Parzen
 class SoftRBFParzen:
     def __init__(self, sigma):
         self.sigma = sigma
@@ -71,15 +67,14 @@ class SoftRBFParzen:
     def predict(self, test_data):
         predictions = []
         for x in test_data:
-            # Vérification de la forme des poids pour éviter les erreurs de type
-            weights = np.exp(-np.sum(np.abs(self.X_train - x), axis=1) / (2 * self.sigma ** 2))  # Poids RBF
-            weighted_labels = np.bincount(self.Y_train, weights=weights)  # Convertir Y_train en int
+            weights = np.exp(-np.sum(np.abs(self.X_train - x), axis=1) / (2 * self.sigma ** 2))
+            weighted_labels = np.bincount(self.Y_train, weights=weights)
             predicted_label = np.argmax(weighted_labels)
             predictions.append(predicted_label)
 
         return np.array(predictions)
 
-
+# Classe pour calculer le taux d'erreur
 class ErrorRate:
     def __init__(self, x_train, y_train, x_val, y_val):
         self.x_train = x_train
@@ -91,17 +86,28 @@ class ErrorRate:
         model = HardParzen(h)
         model.fit(self.x_train, self.y_train)
         predictions = model.predict(self.x_val)
-        return np.mean(predictions != self.y_val)  # Taux d'erreur
+        return np.mean(predictions != self.y_val)
 
     def soft_parzen(self, sigma):
         model = SoftRBFParzen(sigma)
         model.fit(self.x_train, self.y_train)
         predictions = model.predict(self.x_val)
-        return np.mean(predictions != self.y_val)  # Taux d'erreur
+        return np.mean(predictions != self.y_val)
 
+# Fonction pour diviser le jeu de données
+def split_dataset(iris):
+    train_indices = np.where(np.arange(len(iris)) % 5 < 3)[0]
+    val_indices = np.where(np.arange(len(iris)) % 5 == 3)[0]
+    test_indices = np.where(np.arange(len(iris)) % 5 == 4)[0]
 
+    train_set = iris[train_indices]
+    val_set = iris[val_indices]
+    test_set = iris[test_indices]
+
+    return train_set, val_set, test_set
+
+# Fonction pour obtenir les erreurs de test
 def get_test_errors(iris):
-
     train_set, val_set, test_set = split_dataset(iris)
     x_train, y_train = train_set[:, :-1], train_set[:, -1]
     x_val, y_val = val_set[:, :-1], val_set[:, -1]
@@ -127,7 +133,6 @@ def get_test_errors(iris):
             best_sigma_error = error
             best_sigma = sigma
 
-    # Calculer le taux d'erreur sur l'ensemble de test
     hard_parzen_model = HardParzen(best_h)
     hard_parzen_model.fit(x_train, y_train)
     hard_parzen_test_error = np.mean(hard_parzen_model.predict(x_test) != y_test)
@@ -138,8 +143,6 @@ def get_test_errors(iris):
 
     return np.array([hard_parzen_test_error, soft_rbf_parzen_test_error])
 
-
-
+# Fonction pour projections aléatoires
 def random_projections(X, A):
-        return (1 / np.sqrt(2)) * np.dot(X, A)  # Projection aléatoire
-
+    return (1 / np.sqrt(2)) * np.dot(X, A)
