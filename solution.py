@@ -76,16 +76,13 @@ class SoftRBFParzen:
                 weights /= weights_sum
             
             # Vérifier que les poids ne sont pas tous nuls
-            if np.sum(weights) > 0:
-                weighted_labels = np.bincount(self.Y_train, weights=weights)
-                predicted_label = np.argmax(weighted_labels)
-            else:
-                # Tirer un label aléatoire si tous les poids sont nuls
-                predicted_label = np.random.choice(self.Y_train)
-            
+            weighted_labels = np.bincount(self.Y_train, weights=weights)
+            predicted_label = np.argmax(weighted_labels) if np.sum(weighted_labels) > 0 else np.random.choice(self.Y_train)
+
             predictions.append(predicted_label)
 
         return np.array(predictions)
+
 
 
 # Classe pour calculer le taux d'erreur
