@@ -49,20 +49,20 @@ class HardParzen:
 
             if len(neighbors_in_window) == 0:
                 label_list = np.unique(self.Y_train)
-                predictions.append(self.draw_rand_label(x, label_list))
+                predictions.append(self.draw_rand_label(label_list))  # Note: utiliser label_list directement
             else:
                 predicted_label = np.bincount(neighbors_in_window).argmax()
                 predictions.append(predicted_label)
-        
+
         return np.array(predictions)
-    
-    def draw_rand_label(self, x, label_list):
-        return np.random.choice(label_list)
+
+    def draw_rand_label(self, label_list):
+        return np.random.choice(label_list)  # Choisir un label au hasard
 
 
 class SoftRBFParzen:
     def __init__(self, sigma):
-        self.sigma  = sigma
+        self.sigma = sigma
 
     def fit(self, train_inputs, train_labels):
         self.X_train = train_inputs
@@ -71,24 +71,13 @@ class SoftRBFParzen:
     def predict(self, test_data):
         predictions = []
         for x in test_data:
+            # Vérification de la forme des poids pour éviter les erreurs de type
             weights = np.exp(-np.sum(np.abs(self.X_train - x), axis=1) / (2 * self.sigma ** 2))  # Poids RBF
-            weighted_labels = np.bincount(self.Y_train, weights=weights)
+            weighted_labels = np.bincount(self.Y_train, weights=weights)  # Convertir Y_train en int
             predicted_label = np.argmax(weighted_labels)
             predictions.append(predicted_label)
-        
+
         return np.array(predictions)
-
-
-def split_dataset(iris):
-    train_indices = np.where(np.arange(len(iris)) % 5 < 3)[0]  # Indices pour l'entraînement
-    val_indices = np.where(np.arange(len(iris)) % 5 == 3)[0]  # Indices pour la validation
-    test_indices = np.where(np.arange(len(iris)) % 5 == 4)[0]  # Indices pour le test
-
-    train_set = iris[train_indices]
-    val_set = iris[val_indices]
-    test_set = iris[test_indices]
-
-    return train_set, val_set, test_set
 
 
 class ErrorRate:
