@@ -43,7 +43,7 @@ class HardParzen:
     def predict(self, test_data):
         predictions = []
         for x in test_data:
-            distances = np.sum(np.abs(self.X_train - x), axis=1)
+            distances = np.sum(np.abs(self.X_train - x), axis=1)  # Distance L1
             neighbors_in_window = self.Y_train[distances <= self.h]
 
             if len(neighbors_in_window) == 0:
@@ -77,13 +77,16 @@ class SoftRBFParzen:
             if weights_sum > 0:
                 weights /= weights_sum
             
-            weighted_labels = np.bincount(self.Y_train, weights=weights)
-            predicted_label = np.argmax(weighted_labels)
+            # Vérifier que les poids ne sont pas tous nuls avant d'utiliser np.bincount
+            if np.sum(weights) > 0:
+                weighted_labels = np.bincount(self.Y_train, weights=weights)
+                predicted_label = np.argmax(weighted_labels)
+            else:
+                predicted_label = np.random.choice(self.Y_train)  # Tirer un label aléatoire si tous les poids sont nuls
+
             predictions.append(predicted_label)
 
         return np.array(predictions)
-
-
 
 # Classe pour calculer le taux d'erreur
 class ErrorRate:
@@ -97,7 +100,7 @@ class ErrorRate:
         model = HardParzen(h)
         model.fit(self.x_train, self.y_train)
         predictions = model.predict(self.x_val)
-        return np.mean(predictions != self.y_val)
+        return np.mean(predictions != self.y_val)  # Taux d'erreur
 
     def soft_parzen(self, sigma):
         model = SoftRBFParzen(sigma)
