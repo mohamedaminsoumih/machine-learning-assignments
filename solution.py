@@ -56,9 +56,11 @@ class HardParzen:
         return np.array(predictions)
 
 # Classe pour Soft RBF Parzen
+import numpy as np
+
 class SoftRBFParzen:
     def __init__(self, sigma):
-        self.sigma = sigma
+        self.sigma = sigma  # Paramètre de largeur de la fenêtre
 
     def fit(self, train_inputs, train_labels):
         self.X_train = train_inputs
@@ -67,21 +69,23 @@ class SoftRBFParzen:
     def predict(self, test_data):
         predictions = []
         for x in test_data:
+            # Calcul des distances L1
             distances = np.sum(np.abs(self.X_train - x), axis=1)
+            # Calcul des poids RBF
             weights = np.exp(-distances / (2 * self.sigma ** 2))
             
-            # Normaliser les poids
+            # Normalisation des poids
             weights_sum = np.sum(weights)
             if weights_sum > 0:
-                weights /= weights_sum
+                weights /= weights_sum  # Normalisation pour s'assurer que les poids s'additionnent à 1
             
-            # Vérifier que les poids ne sont pas tous nuls avant d'utiliser np.bincount
+            # Calcul des labels pondérés
             weighted_labels = np.bincount(self.Y_train, weights=weights)
-            predicted_label = np.argmax(weighted_labels) if np.sum(weighted_labels) > 0 else np.random.choice(self.Y_train)
-
+            predicted_label = np.argmax(weighted_labels)
             predictions.append(predicted_label)
 
         return np.array(predictions)
+
 
 # Classe pour calculer le taux d'erreur
 class ErrorRate:
