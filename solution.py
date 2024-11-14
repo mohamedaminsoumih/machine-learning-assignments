@@ -73,7 +73,7 @@ class Trainer:
             layers.append(torch.nn.Linear(current_dim, hidden_dim))
             layers.append(activation)
             current_dim = hidden_dim
-        layers.append(torch.nn.Linear(current_dim, 10))  # Output layer for SVHN (10 classes)
+        layers.append(torch.nn.Linear(current_dim, 10))
         return torch.nn.Sequential(*layers)
 
     @staticmethod
@@ -91,10 +91,10 @@ class Trainer:
             current_in_channels = out_channels
         
         layers.append(torch.nn.Flatten())
-        # Adding dense layers after convolutional layers
         conv_output_size = current_in_channels * (32 // (2 ** len(net_config.n_channels))) ** 2
-        dense_layers = Trainer.create_mlp(conv_output_size, net_config, activation)
-        layers.extend(dense_layers)
+        layers.append(torch.nn.Linear(conv_output_size, net_config.dense_hiddens[0]))
+        layers.append(activation)
+        layers.append(torch.nn.Linear(net_config.dense_hiddens[0], 10))
         return torch.nn.Sequential(*layers)
 
     @staticmethod
@@ -111,7 +111,7 @@ class Trainer:
     def compute_loss_and_mae(self, X: torch.Tensor, y: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
         outputs = self.network(X)
         criterion = torch.nn.CrossEntropyLoss()
-        loss = criterion(outputs, y)
+        loss = criterion(outputs, y.long())
         with torch.no_grad():
             _, predictions = torch.max(outputs, 1)
             mae = torch.mean(torch.abs(predictions - y))
@@ -131,18 +131,13 @@ class Trainer:
             train_loss = 0.0
             train_mae = 0.0
             for i, data in enumerate(self.train):
-                # get the inputs; data is a list of [inputs, labels]
                 inputs, labels = data
-
                 loss, mae = self.training_step(inputs, labels)
                 train_loss += loss
                 train_mae += mae
-
-            # Log data every epoch
             self.train_logs['train_mae'].append(train_mae / N)
             self.train_logs['train_loss'].append(train_loss / N)
             self.evaluation_loop()
-    
         return self.train_logs
 
     def evaluation_loop(self) -> None:
@@ -156,7 +151,6 @@ class Trainer:
                 loss, mae = self.compute_loss_and_mae(inputs, labels)
                 test_loss += loss.item()
                 test_mae += mae.item()
-
         self.train_logs['test_mae'].append(test_mae / N)
         self.train_logs['test_loss'].append(test_loss / N)
 
