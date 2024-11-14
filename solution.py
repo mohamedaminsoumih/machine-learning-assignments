@@ -6,19 +6,16 @@ from tqdm import tqdm
 import torchvision
 from torchvision import transforms
 
-
 # Seed all random number generators
 np.random.seed(197331)
 torch.manual_seed(197331)
 random.seed(197331)
-
 
 class NetworkConfiguration(NamedTuple):
     n_channels: Tuple[int, ...] = (16, 32, 48) 
     kernel_sizes: Tuple[int, ...] = (3, 3, 3)
     strides: Tuple[int, ...] = (1, 1, 1)
     dense_hiddens: Tuple[int, ...] = (256, 256)
-
 
 class Trainer:
     def __init__(self,
@@ -70,42 +67,63 @@ class Trainer:
     @staticmethod
     def create_mlp(input_dim: int, net_config: NetworkConfiguration,
                    activation: torch.nn.Module) -> torch.nn.Module:
-        """
-        Create a multi-layer perceptron (MLP) network.
-
-        :param net_config: a NetworkConfiguration named tuple. Only the field 'dense_hiddens' will be used.
-        :param activation: The activation function to use.
-        :return: A PyTorch model implementing the MLP.
-        """
-        # TODO write code here
-        pass
+        layers = []
+        current_dim = input_dim
+        for hidden_dim in net_config.dense_hiddens:
+            layers.append(torch.nn.Linear(current_dim, hidden_dim))
+            layers.append(activation)
+            current_dim = hidden_dim
+        layers.append(torch.nn.Linear(current_dim, 10))  # Output layer for SVHN (10 classes)
+        return torch.nn.Sequential(*layers)
 
     @staticmethod
     def create_cnn(in_channels: int, net_config: NetworkConfiguration,
                    activation: torch.nn.Module) -> torch.nn.Module:
-        """
-        Create a convolutional network.
-
-        :param in_channels: The number of channels in the input image.
-        :param net_config: a NetworkConfiguration specifying the architecture of the CNN.
-        :param activation: The activation function to use.
-        :return: A PyTorch model implementing the CNN.
-        """
-        # TODO write code here
-        pass
+        layers = []
+        current_in_channels = in_channels
+        for out_channels, kernel_size, stride in zip(net_config.n_channels, 
+                                                      net_config.kernel_sizes, 
+                                                      net_config.strides):
+            layers.append(torch.nn.Conv2d(current_in_channels, out_channels, 
+                                          kernel_size=kernel_size, stride=stride, padding=1))
+            layers.append(activation)
+            layers.append(torch.nn.MaxPool2d(kernel_size=2, stride=2))
+            current_in_channels = out_channels
+        
+        layers.append(torch.nn.Flatten())
+        # Adding dense layers after convolutional layers
+        conv_output_size = current_in_channels * (32 // (2 ** len(net_config.n_channels))) ** 2
+        dense_layers = Trainer.create_mlp(conv_output_size, net_config, activation)
+        layers.extend(dense_layers)
+        return torch.nn.Sequential(*layers)
 
     @staticmethod
     def create_activation_function(activation_str: str) -> torch.nn.Module:
-        # TODO WRITE CODE HERE
-        pass
+        if activation_str.lower() == "relu":
+            return torch.nn.ReLU()
+        elif activation_str.lower() == "tanh":
+            return torch.nn.Tanh()
+        elif activation_str.lower() == "sigmoid":
+            return torch.nn.Sigmoid()
+        else:
+            raise ValueError(f"Unsupported activation function: {activation_str}")
 
     def compute_loss_and_mae(self, X: torch.Tensor, y: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        # TODO WRITE CODE HERE
-        pass
+        outputs = self.network(X)
+        criterion = torch.nn.CrossEntropyLoss()
+        loss = criterion(outputs, y)
+        with torch.no_grad():
+            _, predictions = torch.max(outputs, 1)
+            mae = torch.mean(torch.abs(predictions - y))
+        return loss, mae
 
     def training_step(self, X_batch: torch.Tensor, y_batch: torch.Tensor):
-        # TODO WRITE CODE HERE
-        pass
+        self.network.train()
+        self.optimizer.zero_grad()
+        loss, mae = self.compute_loss_and_mae(X_batch, y_batch)
+        loss.backward()
+        self.optimizer.step()
+        return loss.item(), mae.item()
 
     def train_loop(self, n_epochs: int) -> dict:
         N = len(self.train)
@@ -142,7 +160,8 @@ class Trainer:
         self.train_logs['test_mae'].append(test_mae / N)
         self.train_logs['test_loss'].append(test_loss / N)
 
-
     def evaluate(self, X: torch.Tensor, y: torch.Tensor) -> Tuple[torch.Tensor, torch.Tensor]:
-        # TODO WRITE CODE HERE
-        pass
+        self.network.eval()
+        with torch.inference_mode():
+            loss, mae = self.compute_loss_and_mae(X, y)
+        return loss.item(), mae.item()
